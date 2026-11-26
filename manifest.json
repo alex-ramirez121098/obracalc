@@ -1,27 +1,25 @@
+JSON
+
 {
-  "id": "./",
-  "name": "ObraCalc - Calculadora de materiales",
-  "short_name": "ObraCalc",
-  "description": "Calculadora de materiales de construcción",
-  "lang": "es",
+  "name": "Calculadora de Materiales de Construcción",
+  "short_name": "Calculadora",
+  "description": "Calculadora de materiales y estructuras de construcción",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e293b",
   "orientation": "portrait",
-  "background_color": "#eef2f7",
-  "theme_color": "#172554",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "./icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "./icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     }
   ]
 }
