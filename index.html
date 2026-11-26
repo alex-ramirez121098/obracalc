@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#172554"><title>ObraCalc</title>
+<style>
+:root{--navy:#172554;--blue:#2563eb;--bg:#eef2f7;--card:#fff;--text:#172033;--muted:#64748b;--line:#dbe3ee;--green:#15803d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+.app{max-width:560px;margin:auto;min-height:100vh;padding:14px}
+.header{background:linear-gradient(135deg,#172554,#1d4ed8);color:#fff;border-radius:18px;padding:18px;box-shadow:0 8px 22px #17255422}
+.brand{font-size:27px;font-weight:800}.sub{font-size:11px;color:#dbeafe;margin-top:5px;letter-spacing:.7px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:13px;box-shadow:0 3px 12px #0f172a08}
+h2{font-size:17px;margin:0 0 13px}.field{margin:11px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+input,select{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font-size:16px;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb1c}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.unit{font-size:11px;color:var(--muted);font-weight:400}
+.btn{border:0;border-radius:11px;padding:14px;width:100%;background:var(--blue);color:white;font-size:14px;font-weight:700;margin-top:8px}
+.btn.secondary{background:#e2e8f0;color:#1e293b}.hidden{display:none!important}
+.modulebar{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:13px}
+.module{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 5px;font-size:11px;color:#334155;min-height:48px}
+.module.active{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8;font-weight:700}
+.metric{background:#eff6ff;border-radius:12px;padding:13px;margin-bottom:10px}.metric .big{font-size:25px;font-weight:800;color:#1d4ed8}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:10px 6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-size:11px;text-transform:uppercase}td:last-child,th:last-child{text-align:right;font-weight:700}
+.note{font-size:12px;line-height:1.5;color:var(--muted);margin:10px 0 0}.pill{background:#dcfce7;color:#166534;border-radius:30px;padding:5px 9px;font-size:11px;font-weight:700}
+.footer{text-align:center;color:#94a3b8;font-size:11px;padding:18px 4px}
+.resultHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+@media(max-width:360px){.grid{grid-template-columns:1fr}.modulebar{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><main class="app">
+<header class="header"><div class="brand">ObraCalc</div><div class="sub">CALCULADORA DE MATERIALES DE CONSTRUCCIÓN</div></header>
+<nav class="modulebar" id="modules"></nav>
+<section class="panel">
+  <div class="resultHead"><h2 id="formTitle">Calculadora de rejas</h2><span class="pill" id="modePill">Sencillo</span></div>
+  <div class="field"><label for="mode">Modo de cálculo</label><select id="mode"><option value="simple">Sencillo</option><option value="pro">Profesional</option></select></div>
+  <div id="fields"></div>
+  <button class="btn" onclick="calculate()">CALCULAR MATERIALES</button>
+  <button class="btn secondary" onclick="resetFields()">RESTABLECER</button>
+</section>
+<section class="panel hidden" id="results">
+  <div class="resultHead"><h2 style="margin:0">Resultado del cálculo</h2><span class="pill">Calculado</span></div>
+  <div class="metric"><div class="big" id="mainResult">—</div><small id="mainLabel">Resultado principal</small></div>
+  <table><thead><tr><th>Concepto</th><th>Resultado</th></tr></thead><tbody id="resultRows"></tbody></table>
+  <p class="note" id="assumption"></p>
+</section>
+<section class="panel">
+<h2>Presupuesto rápido</h2>
+<div class="grid">
+<div class="field"><label>Precio unitario del material principal (C$)</label><input id="unitPrice" type="number" min="0" step=".01" placeholder="0.00"></div>
+<div class="field"><label>Mano de obra (C$)</label><input id="labor" type="number" min="0" step=".01" placeholder="0.00"></div>
+</div>
+<button class="btn secondary" onclick="calculateBudget()">CALCULAR PRESUPUESTO</button>
+<div id="budgetResult" class="note">Calcula primero los materiales. El presupuesto usa la cantidad principal estimada.</div>
+</section>
+<div class="footer">ObraCalc · Versión ampliada de prueba · Verifica medidas y especificaciones antes de construir.</div>
+</main>
+<script>
+const definitions = {
+rejas:{title:"Rejas y verjas",fields:[
+["height","Alto de la reja","number","100","cm"],["width","Ancho de la reja","number","200","cm"],
+["bar","Ancho del barrote","select","0.5","pulgadas",["3/8|0.375","1/2|0.5","5/8|0.625","3/4|0.75","1|1","Personalizada|custom"]],
+["customBar","Barrote personalizado","number","0.625","pulgadas"],["gap","Separación libre entre barrotes","number","5","cm"],["waste","Desperdicio","number","10","%"],["stock","Largo comercial del perfil","number","6","m"]]},
+escaleras:{title:"Escaleras",fields:[
+["rise","Altura vertical","number","280","cm"],["run","Longitud horizontal","number","300","cm"]]},
+puertas:{title:"Puertas y portones",fields:[
+["height","Alto","number","200","cm"],["width","Ancho","number","100","cm"],["frame","Perfil del marco","select","1","pulgadas",["1|1","1 1/4|1.25","1 1/2|1.5","2|2"]],["inner","Cantidad de travesaños interiores","number","2","unidades"],["waste","Desperdicio","number","10","%"],["stock","Largo comercial del perfil","number","6","m"]]},
+estribos:{title:"Hierro y estribos",fields:[
+["beamW","Ancho de viga/columna","number","20","cm"],["beamH","Alto de viga/columna","number","30","cm"],["cover","Recubrimiento","number","2.5","cm"],["spacing","Separación entre estribos","number","15","cm"],["length","Longitud del elemento","number","300","cm"],["hook","Longitud adicional por ganchos","number","20","cm"],["waste","Desperdicio","number","5","%"]]},
+perlines:{title:"Perlines y techos",fields:[
+["roofLength","Largo del techo","number","600","cm"],["roofWidth","Ancho/inclinación del faldón","number","400","cm"],["spacing","Separación entre perlines","number","100","cm"],["stock","Largo comercial del perlin","number","6","m"],["waste","Desperdicio","number","10","%"]]},
+gypsum:{title:"Gypsum",fields:[
+["roomLength","Largo del área","number","400","cm"],["roomWidth","Ancho del área","number","300","cm"],["sheetL","Largo de lámina","number","244","cm"],["sheetW","Ancho de lámina","number","122","cm"],["studSpacing","Separación de estructura","number","40","cm"],["waste","Desperdicio","number","10","%"]]},
+concreto:{title:"Concreto",fields:[
+["cLength","Largo","number","300","cm"],["cWidth","Ancho","number","200","cm"],["cHeight","Espesor/alto","number","10","cm"],["waste","Desperdicio","number","5","%"],["cementYield","Rendimiento de una bolsa","number","0.035","m³/bolsa"],["sandRatio","Arena por m³","number","0.56","m³"],["gravelRatio","Grava por m³","number","0.84","m³"]]},
+paredes:{title:"Paredes y bloques",fields:[
+["wallLength","Largo de pared","number","500","cm"],["wallHeight","Alto de pared","number","250","cm"],["blockL","Largo del bloque","number","40","cm"],["blockH","Alto del bloque","number","20","cm"],["waste","Desperdicio","number","5","%"]]}
+};
+let current="rejas", lastPrimary=0, lastUnit="";
+const $=id=>document.getElementById(id);
+function buildModules(){
+ const labels=[["rejas","Rejas y verjas"],["escaleras","Escaleras"],["puertas","Puertas y portones"],["estribos","Hierro y estribos"],["perlines","Perlines y techos"],["gypsum","Gypsum"],["concreto","Concreto"],["paredes","Paredes y bloques"]];
+ $("modules").innerHTML=labels.map(([k,l])=>`<button class="module ${k===current?'active':''}" onclick="selectModule('${k}')">${l}</button>`).join("");
+}
+function selectModule(k){current=k;buildModules();renderFields();$("results").classList.add("hidden");$("budgetResult").textContent="Calcula primero los materiales."}
+function renderFields(){
+ const d=definitions[current];$("formTitle").textContent="Calculadora de "+d.title.toLowerCase();
+ $("fields").innerHTML=d.fields.map(f=>{
+  const [id,label,type,val,unit,opts]=f;
+  if(id==="customBar" && current!=="rejas")return "";
+  let control=type==="select"?`<select id="${id}">${opts.map(o=>{let [t,v]=o.split("|");return `<option value="${v}" ${v===val?'selected':''}>${t}${id==='bar'?' pulgadas':''}</option>`}).join("")}</select>`:`<input id="${id}" type="number" step="any" value="${val}">`;
+  let hide=id==="customBar"?"hidden":"";
+  return `<div class="field ${hide}" id="wrap_${id}"><label for="${id}">${label} <span class="unit">(${unit})</span></label>${control}</div>`;
+ }).join("");
+ if(current==="rejas"){$("bar").addEventListener("change",()=> $("wrap_customBar").classList.toggle("hidden",$("bar").value!=="custom"));}
+}
+function v(id){return Number($(id)?.value||0)}
+function fmt(n,d=2){return Number(n).toLocaleString("es-NI",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function rows(arr){$("resultRows").innerHTML=arr.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join("")}
+function show(main,label,arr,note,primary,unit){$("mainResult").textContent=main;$("mainLabel").textContent=label;rows(arr);$("assumption").textContent=note;$("results").classList.remove("hidden");lastPrimary=primary;lastUnit=unit;$("budgetResult").textContent="";}
+function calculate(){
+ const w=v("waste"), stock=v("stock")||6; let arr=[], note="", main="",label="",primary=0,unit="";
+ switch(current){
+ case "rejas":{
+ const h=v("height"),width=v("width"),gap=v("gap"),inch=$("bar").value==="custom"?v("customBar"):v("bar"),barCm=inch*2.54;
+ if(!(h>0&&width>0&&gap>=0&&inch>0)){alert("Revisa las medidas de la reja.");return}
+ const n=Math.floor((width+gap)/(barCm+gap));if(n<1){alert("No cabe ningún barrote con estas medidas.");return}
+ const side=(width-(n*barCm+(n-1)*gap))/2, bars=n*h/100*(1+w/100), frame=2*(h+width)/100*(1+w/100);
+ main=n+" unidades";label="Barrotes necesarios";primary=bars;unit="m";
+ arr=[["Ancho del barrote",inch+'" ('+fmt(barCm)+' cm)'],["Separación libre",fmt(gap)+" cm"],["Espacio lateral estimado",fmt(side)+" cm por lado"],["Longitud de barrotes con desperdicio",fmt(bars)+" m"],["Barras de 6 m para barrotes",Math.ceil(bars/stock)+" unidades"],["Marco perimetral estimado",fmt(frame)+" m"],["Barras de 6 m para marco",Math.ceil(frame/stock)+" unidades"]];
+ note="Supone barrotes verticales, separación libre constante y sobrante repartido a ambos lados. Marco estimado como perímetro rectangular; no incluye travesaños, anclajes ni optimización de cortes.";
+ break}
+ case "escaleras":{
+ const rise=v("rise"),run=v("run");
+ if(!(rise>0&&run>0)){alert("Ingresa una altura vertical y una longitud horizontal mayores que cero.");return}
+ // Selecciona la distribución más cercana a una contrahuella cómoda y a 2C+H ≈ 63 cm.
+ let best=null;
+ for(let n=Math.max(2,Math.floor(rise/20));n<=Math.ceil(rise/14);n++){
+   const riser=rise/n, tread=run/(n-1), comfort=2*riser+tread;
+   const score=Math.abs(riser-17.5)*1.2+Math.abs(comfort-63)*0.7;
+   if(!best||score<best.score) best={n,riser,tread,comfort,score};
+ }
+ const treadCount=best.n-1, hyp=Math.hypot(rise,run), slope=Math.atan2(rise,run)*180/Math.PI;
+ main=best.n+" contrahuellas";label="Distribución calculada";primary=treadCount;unit="huellas";
+ arr=[
+ ["Altura vertical total",fmt(rise)+" cm"],
+ ["Longitud horizontal total",fmt(run)+" cm"],
+ ["Cantidad de contrahuellas",best.n+" unidades"],
+ ["Altura exacta de cada contrahuella",fmt(best.riser)+" cm"],
+ ["Cantidad de huellas",treadCount+" unidades"],
+ ["Profundidad exacta de cada huella",fmt(best.tread)+" cm"],
+ ["Desarrollo inclinado aproximado",fmt(hyp)+" cm"],
+ ["Ángulo de inclinación",fmt(slope)+"°"],
+ ["Relación de comodidad (2C + H)",fmt(best.comfort)+" cm"]
+ ];
+ note="La aplicación busca una contrahuella cercana a 17.5 cm y una relación 2C + H cercana a 63 cm. Se consideran "+best.n+" contrahuellas y "+treadCount+" huellas (una menos), para llegar al nivel superior. Las dimensiones se calculan para ajustarse exactamente a la altura y longitud ingresadas. Verifica normativa local, altura libre, descansos, cargas y seguridad antes de construir.";
+ break}
+ case "puertas":{
+ const h=v("height"),width=v("width"),inner=v("inner");if(!(h>0&&width>0)){alert("Ingresa alto y ancho válidos.");return}
+ const frame=2*(h+width)/100, internal=inner*width/100, total=(frame+internal)*(1+w/100);
+ main=fmt(total)+" m";label="Perfil total estimado";primary=total;unit="m";
+ arr=[["Marco perimetral",fmt(frame)+" m"],["Travesaños interiores",fmt(internal)+" m"],["Perfil total con desperdicio",fmt(total)+" m"],["Piezas comerciales de "+stock+" m",Math.ceil(total/stock)+" unidades"],["Ancho del perfil seleccionado",$("frame").value+'"']];
+ note="Estimación de marco rectangular y travesaños horizontales de ancho completo. No incluye bisagras, cerradura, refuerzos, forro ni postes de soporte.";
+ break}
+ case "estribos":{
+ const bw=v("beamW"),bh=v("beamH"),cov=v("cover"),sp=v("spacing"),len=v("length"),hook=v("hook");if(!(bw>2*cov&&bh>2*cov&&sp>0&&len>0)){alert("Revisa dimensiones, recubrimiento y separación.");return}
+ const n=Math.floor(len/sp)+1, one=(2*((bw-2*cov)+(bh-2*cov))+hook)/100, total=n*one*(1+w/100);
+ main=n+" estribos";label="Cantidad estimada";primary=total;unit="m";
+ arr=[["Cantidad de estribos",n],["Dimensión aproximada del estribo",fmt(bw-2*cov)+" × "+fmt(bh-2*cov)+" cm"],["Longitud por estribo",fmt(one)+" m"],["Hierro total con desperdicio",fmt(total)+" m"],["Barras comerciales de 6 m",Math.ceil(total/6)+" unidades"]];
+ note="Cálculo geométrico aproximado con recubrimiento y gancho adicional indicado. Diámetro, longitud de ganchos, radios, anclajes y separación deben definirse según diseño estructural.";
+ break}
+ case "perlines":{
+ const L=v("roofLength"),W=v("roofWidth"),sp=v("spacing"),st=v("stock");if(!(L>0&&W>0&&sp>0&&st>0)){alert("Ingresa medidas válidas.");return}
+ const n=Math.ceil(W/sp)+1,total=n*L/100*(1+w/100);
+ main=n+" perlines";label="Cantidad de líneas de perlines";primary=total;unit="m";
+ arr=[["Cantidad de perlines",n],["Largo de cada perlin",fmt(L/100)+" m"],["Longitud total con desperdicio",fmt(total)+" m"],["Piezas comerciales de "+st+" m",Math.ceil(total/st)+" unidades"]];
+ note="Se asume que los perlines recorren el largo del techo y se distribuyen a lo ancho según separación máxima indicada. No calcula cerchas, correas de borde, traslapes ni cargas de viento.";
+ break}
+ case "gypsum":{
+ const L=v("roomLength"),W=v("roomWidth"),sl=v("sheetL"),sw=v("sheetW"),ss=v("studSpacing");if(!(L>0&&W>0&&sl>0&&sw>0&&ss>0)){alert("Ingresa medidas válidas.");return}
+ const area=L*W/10000,sheetArea=sl*sw/10000,sheets=Math.ceil(area/sheetArea*(1+w/100)),tracks=(Math.ceil(L/ss)+1)*W/100,perimeter=2*(L+W)/100;
+ main=sheets+" láminas";label="Láminas estimadas";primary=sheets;unit="láminas";
+ arr=[["Área",fmt(area)+" m²"],["Área por lámina",fmt(sheetArea)+" m²"],["Láminas con desperdicio",sheets+" unidades"],["Estructura secundaria aproximada",fmt(tracks)+" m"],["Canal perimetral",fmt(perimeter)+" m"]];
+ note="Estimación para una superficie plana y una sola cara/cielo. No contempla juntas, recortes, doble capa, vanos, tornillos ni distribución exacta de perfiles.";
+ break}
+ case "concreto":{
+ const L=v("cLength"),W=v("cWidth"),H=v("cHeight"),yieldC=v("cementYield"),sand=v("sandRatio"),gravel=v("gravelRatio");if(!(L>0&&W>0&&H>0&&yieldC>0)){alert("Ingresa medidas y rendimiento válidos.");return}
+ const vol=L*W*H/1e6*(1+w/100),bags=Math.ceil(vol/yieldC),sandV=vol*sand,gravelV=vol*gravel;
+ main=fmt(vol)+" m³";label="Volumen de concreto con desperdicio";primary=bags;unit="bolsas";
+ arr=[["Volumen sin desperdicio",fmt(L*W*H/1e6)+" m³"],["Volumen con desperdicio",fmt(vol)+" m³"],["Cemento estimado",bags+" bolsas"],["Arena estimada",fmt(sandV)+" m³"],["Grava estimada",fmt(gravelV)+" m³"]];
+ note="Las cantidades de cemento, arena y grava dependen de la dosificación real. Rendimiento y proporciones son editables y deben ajustarse a la resistencia y mezcla especificadas.";
+ break}
+ case "paredes":{
+ const L=v("wallLength"),H=v("wallHeight"),bl=v("blockL"),bh=v("blockH");if(!(L>0&&H>0&&bl>0&&bh>0)){alert("Ingresa dimensiones válidas.");return}
+ const area=L*H/10000,blockArea=bl*bh/10000,n=Math.ceil(area/blockArea*(1+w/100));
+ main=n+" bloques";label="Bloques estimados";primary=n;unit="bloques";
+ arr=[["Área de pared",fmt(area)+" m²"],["Área frontal por bloque",fmt(blockArea)+" m²"],["Bloques con desperdicio",n+" unidades"],["Filas aproximadas",Math.ceil(H/bh)],["Bloques por fila aproximados",Math.ceil(L/bl)]];
+ note="Cálculo por área, sin descontar puertas o ventanas. No incluye mortero, columnas, vigas, refuerzo ni cortes especiales.";
+ break}
+ }
+ show(main,label,arr,note,primary,unit);
+}
+function calculateBudget(){
+ if(!lastPrimary){alert("Primero calcula los materiales.");return}
+ const p=v("unitPrice"),labor=v("labor"),total=lastPrimary*p+labor;
+ $("budgetResult").textContent="Material principal: "+fmt(lastPrimary)+" "+lastUnit+" × C$ "+fmt(p)+" = C$ "+fmt(lastPrimary*p)+". Mano de obra: C$ "+fmt(labor)+". TOTAL ESTIMADO: C$ "+fmt(total)+".";
+}
+function resetFields(){renderFields();$("results").classList.add("hidden");$("budgetResult").textContent="Calcula primero los materiales.";lastPrimary=0}
+$("mode").addEventListener("change",()=>{$("modePill").textContent=$("mode").value==="pro"?"Profesional":"Sencillo"});
+buildModules();renderFields();
+</script></body></html>
