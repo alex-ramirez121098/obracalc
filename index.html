@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#172554"><title>ObraCalc</title>
+<meta name="theme-color" content="#172554"><meta name="description" content="ObraCalc: calculadora de materiales de construcción."><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ObraCalc"><link rel="manifest" href="manifest.json"><link rel="icon" href="icons/icon-192.png" type="image/png"><link rel="apple-touch-icon" href="icons/icon-192.png"><title>ObraCalc</title>
 <style>
 :root{--navy:#172554;--blue:#2563eb;--bg:#eef2f7;--card:#fff;--text:#172033;--muted:#64748b;--line:#dbe3ee;--green:#15803d}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
@@ -26,7 +26,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:10px 6px;
 .resultHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 @media(max-width:360px){.grid{grid-template-columns:1fr}.modulebar{grid-template-columns:repeat(2,1fr)}}
 </style></head><body><main class="app">
-<header class="header"><div class="brand">ObraCalc</div><div class="sub">CALCULADORA DE MATERIALES DE CONSTRUCCIÓN</div></header>
+<header class="header"><div class="brand">ObraCalc</div><div class="sub">CALCULADORA DE MATERIALES DE CONSTRUCCIÓN</div><button id="installBtn" class="btn hidden" style="background:#fff;color:#1d4ed8;margin-top:12px" type="button">INSTALAR OBRACALC</button></header>
 <nav class="modulebar" id="modules"></nav>
 <section class="panel">
   <div class="resultHead"><h2 id="formTitle">Calculadora de rejas</h2><span class="pill" id="modePill">Sencillo</span></div>
@@ -185,4 +185,34 @@ function calculateBudget(){
 function resetFields(){renderFields();$("results").classList.add("hidden");$("budgetResult").textContent="Calcula primero los materiales.";lastPrimary=0}
 $("mode").addEventListener("change",()=>{$("modePill").textContent=$("mode").value==="pro"?"Profesional":"Sencillo"});
 buildModules();renderFields();
-</script></body></html>
+</script>
+<script>
+let deferredInstallPrompt = null;
+const installButton = document.getElementById("installBtn");
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  if (installButton) installButton.classList.remove("hidden");
+});
+if (installButton) {
+  installButton.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installButton.classList.add("hidden");
+  });
+}
+window.addEventListener("appinstalled", () => {
+  if (installButton) installButton.classList.add("hidden");
+});
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch((error) => {
+      console.error("No se pudo registrar el modo sin conexión:", error);
+    });
+  });
+}
+</script>
+
+</body></html>
